@@ -7,19 +7,18 @@ class TSqlFileVisitor(var fileId: String) extends TSqlParserBaseVisitor[Schema] 
 
   def getSchema(parser: TSqlParser): Schema = {
     visitTsql_file(parser.tsql_file())
+    schema
   }
 
-  override def visitTsql_file(ctx: TSqlParser.Tsql_fileContext): Schema = {
+//  override def visitTsql_file(ctx: TSqlParser.Tsql_fileContext): Schema = {
+//    visitChildren(ctx)
+//    schema
+//  }
+
+  override def visitQuery_specification (ctx: TSqlParser.Query_specificationContext): Schema = {
+//    visitChildren(ctx)
     val vis = new TSqlQuerySpecificationVisitor(schema)
-    vis.visit(
-    ctx.batch(0).
-      sql_clauses().
-      sql_clause(0).
-      dml_clause().
-      select_statement().
-      query_expression().
-      query_specification()
-    )
+    vis.visit(ctx)
     schema
   }
 }

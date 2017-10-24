@@ -1,7 +1,30 @@
 package grammars
 
+import play.api.libs.json._
+
 class Schema (var fileId: String){
   var tables: Seq[Table] = Seq[Table]()
+  var scopes: List[Scope] = List(new Scope(null))
+
+  def closeScope(): Schema = {
+    val _ :: s = scopes
+    scopes = s
+    this
+  }
+
+  def openScope(): Schema = {
+    val parent :: _ = scopes
+    scopes = new Scope(parent) :: scopes
+    this
+  }
+
+  def addScope(alias: String, table: String): Unit = {
+    scopes.head += alias -> table
+  }
+
+  def fromScope(alias: String): Option[String] = {
+    scopes.head.first(alias)
+  }
 
   def addTable(name: String): Table = {
     val existingTable = tableByName(name)
@@ -17,6 +40,53 @@ class Schema (var fileId: String){
   def tableByName(name: String): Option[Table] = {
     if(tables isEmpty) return Option.empty[Table]
     tables.find(_.name == name)
+  }
+
+  def marshallJson(): String = {
+    implicit class RichJsObject(original: JsObject) {
+      def omitEmpty: JsObject = original.value.foldLeft(original) {
+        case (obj, (key, JsString(st))) if st == null || st.isEmpty => obj - key
+        case (obj, (key, JsArray(arr))) if arr == null || arr.isEmpty => obj - key
+        case (obj, (_, _)) => obj
+      }
+    }
+
+    implicit val columnWrites = new Writes[Column] {
+      def writes(column: Column) = Json.obj(
+        "name" -> column.name,
+        "traces" -> column.traces.map(t => s"${t.file}:${t.line}:${t.column}")
+      ).omitEmpty
+    }
+
+    implicit val tableWrites = new Writes[Table] {
+      def writes(table: Table) = Json.obj(
+        "name" -> table.name,
+        "traces" -> table.traces.map(t => s"${t.file}:${t.line}:${t.column}"),
+        "columns" -> table.columns
+      ).omitEmpty
+    }
+
+    implicit val schemaWrites = new Writes[Schema] {
+      def writes(schema: Schema) = Json.obj(
+        "tables" -> schema.tables
+      ).omitEmpty
+    }
+
+    val json = Json.prettyPrint(Json.toJson(this))
+    json
+  }
+}
+
+class Scope(val parent: Scope) extends scala.collection.mutable.HashMap[String, String] {
+  def inScope(varName: String): Boolean = {
+    if (super.contains(varName)) return true
+    if (parent == null) false
+    else parent.inScope(varName)
+  }
+  def first(varName: String): Option[String] = {
+    if (super.contains(varName)) return super.get(varName)
+    if (parent == null) Option.empty[String]
+    else parent.first(varName)
   }
 }
 

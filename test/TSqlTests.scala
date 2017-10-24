@@ -1,10 +1,12 @@
-import java.io.ByteArrayInputStream
+import java.io.{ByteArrayInputStream, File}
 import java.nio.charset.StandardCharsets
 
 import grammars.tsql.{TSqlFileVisitor, TSqlLexer, TSqlParser, TSqlSelectListVisitor}
 import org.antlr.v4.runtime.{CharStreams, CommonTokenStream}
 import org.scalatest._
 import org.scalatest.matchers._
+
+import scala.io.Codec
 
 class TSqlTests extends FunSuite with Matchers {
 //  var parser: TSqlParser
@@ -13,7 +15,8 @@ class TSqlTests extends FunSuite with Matchers {
 //  }
 
   def getParser(statements: String): TSqlParser = {
-    val stream = new ByteArrayInputStream(statements.getBytes(StandardCharsets.UTF_8))
+    val statementsUpper = statements.toUpperCase
+    val stream = new ByteArrayInputStream(statementsUpper.getBytes(StandardCharsets.UTF_8))
     val lexer = new TSqlLexer(CharStreams.fromStream(stream, StandardCharsets.UTF_8))
     val tokens = new CommonTokenStream(lexer)
     new grammars.tsql.TSqlParser(tokens)
@@ -24,6 +27,8 @@ class TSqlTests extends FunSuite with Matchers {
 
     val vis = new TSqlFileVisitor("file")
     val schema = vis.getSchema(parser)
+
+    println(schema.marshallJson())
 
     schema.tables.length shouldEqual 1
     val table = schema.tables.head
@@ -49,7 +54,7 @@ ON T1.C1 = T2.C1;""")
     val vis = new TSqlFileVisitor("file")
     val schema = vis.getSchema(parser)
 
-    println(schema.tables.map(_.name).mkString(", "))
+    println(schema.marshallJson())
 
     schema.tables.length shouldEqual 2
     schema.tables.map(_.name).toSet shouldEqual Set("T1", "T2")
@@ -102,10 +107,42 @@ ON T1.C1 = T2.C1;""")
     val vis = new TSqlFileVisitor("file")
     val schema = vis.getSchema(parser)
 
+    println(schema.marshallJson())
+
     schema.tables.length shouldEqual 1
     val table = schema.tables.head
     table.name shouldEqual "T1"
     table.columns.length shouldEqual 3
     table.columns.map(_.name).toSet shouldEqual Set("C1", "C2", "C3")
+  }
+
+  test("alias") {
+    val parser = getParser("SELECT a.C1, T1.C2, C3 FROM T1 a;")
+
+    val vis = new TSqlFileVisitor("file")
+    val schema = vis.getSchema(parser)
+
+    println(schema.marshallJson())
+
+    schema.tables.length shouldEqual 1
+    val table = schema.tables.head
+    table.name shouldEqual "T1"
+    table.columns.length shouldEqual 3
+    table.columns.map(_.name).toSet shouldEqual Set("C1", "C2", "C3")
+  }
+
+  test("oneShot") {
+    val source = scala.io.Source.fromFile(new File("/data/work/vp/dev/tsqlcontrolsource/LOGSQL02/VPN3/Programmability/Stored Procedures/RPT_OrderDO.sql"))(Codec.ISO8859)
+    println(source)
+
+    val lines = try source.mkString finally source.close()
+    println(lines)
+
+    val parser = getParser(lines)
+
+    val vis = new TSqlFileVisitor("file")
+    val schema = vis.getSchema(parser)
+
+    println(schema.marshallJson())
   }
 }
