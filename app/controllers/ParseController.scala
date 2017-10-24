@@ -10,7 +10,7 @@ import org.stringtemplate.v4._
 import java.io.FileInputStream
 import java.nio.charset.StandardCharsets
 
-import grammars.tsql.{TSqlLexer, TSqlSelectListVisitor}
+import grammars.tsql.{TSqlFileVisitor, TSqlLexer, TSqlSelectListVisitor}
 import org.antlr.runtime.ANTLRStringStream
 
 import scala.collection.JavaConverters._
@@ -39,19 +39,9 @@ class ParseController @Inject()(cc: ControllerComponents) extends AbstractContro
 
     println (prog.toString)
 
-    val vis = new TSqlSelectListVisitor()
+    val vis = new TSqlFileVisitor("file")
     println ("ici")
-    val batch = prog.batch(0)
-    vis.visitSelect_list(
-      batch.
-      sql_clauses().
-      sql_clause(0).
-      dml_clause().
-      select_statement().
-      query_expression().
-      query_specification().
-      select_list()
-    )
+    var schema = vis.getSchema(parser)
     println ("la")
 
     Ok(views.html.parse("Parse"))
