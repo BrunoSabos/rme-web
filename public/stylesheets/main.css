@@ -1,3 +1,8 @@
 body {
     padding-top: 5rem;
 }
+
+#sql_ace {
+    width: 400px;
+    height: 400px;
+}

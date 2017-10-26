@@ -1,18 +1,13 @@
 import java.io.{ByteArrayInputStream, File}
 import java.nio.charset.StandardCharsets
 
-import grammars.tsql.{TSqlFileVisitor, TSqlLexer, TSqlParser, TSqlSelectListVisitor}
+import grammars.tsql.{TSqlFileVisitor, TSqlLexer, TSqlParser}
 import org.antlr.v4.runtime.{CharStreams, CommonTokenStream}
 import org.scalatest._
-import org.scalatest.matchers._
 
 import scala.io.Codec
 
 class TSqlTests extends FunSuite with Matchers {
-//  var parser: TSqlParser
-
-//  before {
-//  }
 
   def getParser(statements: String): TSqlParser = {
     val statementsUpper = statements.toUpperCase

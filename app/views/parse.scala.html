@@ -2,21 +2,27 @@
 @import b4.vertical.fieldConstructor
 
 @main("Welcome to Play") {
+    <div class="row">
+        <div class="col-md-6">
+        @b4.form(action = controllers.routes.ParseController.index()) {
+            @b4.textarea(sqlForm("sql"))
+            @b4.submit('class -> "btn btn-primary") { Parse }
+        }
+            <div id="sql_ace"></div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="card-title">Tables</h4>
 
-    @b4.form(action = controllers.routes.ParseController.index()) {
-        @b4.textarea(sqlForm("sql"))
-        @b4.submit('class -> "btn btn-primary"){ Parse }
-    }
-    <div class="card">
-        <div class="card-body">
-            <h4 class="card-title">Tables</h4>
-
-            <p class="card-text">
-                We found @tableCount tables
-                    <br>
-                <pre>@json</pre>
-            </p>
-            <a href="#" class="btn btn-primary">Go somewhere</a>
+                    <p class="card-text">
+                        We found @tableCount tables
+                        <br/>
+                        <pre>@json</pre>
+                    </p>
+                    <a href="#" class="btn btn-primary">Go somewhere</a>
+                </div>
+            </div>
         </div>
     </div>
 }
