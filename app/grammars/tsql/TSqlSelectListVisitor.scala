@@ -1,5 +1,6 @@
 package grammars.tsql
 
+import grammars.tsql.TSqlParser.Full_column_nameContext
 import grammars.{Column, Schema, Table, Trace}
 import org.antlr.v4.runtime.ParserRuleContext
 
@@ -122,6 +123,57 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
       addColumnTrace(column, ctx)
     }
     visitChildren(ctx)
+    schema
+  }
+
+  override def visitPredicate (ctx: TSqlParser.PredicateContext): Schema = {
+    visitChildren(ctx)
+    if(ctx.comparison_operator() != null) {
+      // todo other operators
+      if(ctx.comparison_operator().start.getType == TSqlLexer.EQUAL && ctx.expression().asScala.length == 2) {
+        val a = ctx.expression(0)
+        val b = ctx.expression(1)
+        //val ruleA = a.getRuleIndex
+        //val aName = schema.parser.getRuleNames()(ruleA)
+//        println(s"\t+ relation ? ${a.children.asScala.head.getClass}")
+        var table1: String = null
+        var field1: String = null
+        var table2: String = null
+        var field2: String = null
+        a.children.asScala.head match {
+          case aI: Full_column_nameContext =>
+            if (aI.table_name() != null) {
+              // todo refact
+              table1 = aI.table_name().getText
+              if(schema.fromScope(table1) isDefined) {
+                table1 = schema.addTable(schema.fromScope(table1).get).name
+              }
+            }
+            if (aI.id() != null) {
+              field1 = aI.id().getText
+            }
+          case _ =>
+        }
+        b.children.asScala.head match {
+          case aI: Full_column_nameContext =>
+            if (aI.table_name() != null) {
+              table2 = aI.table_name().getText
+              if(schema.fromScope(table2) isDefined) {
+                table2 = schema.addTable(schema.fromScope(table2).get).name
+              }
+            }
+            if (aI.id() != null) {
+              field2 = aI.id().getText
+            }
+          case _ =>
+        }
+
+        if(table1 != null && field1 != null && table2 != null && field2 != null) {
+          println(s"\t+ relation between ${table1}, ${field1}, ${table2}, ${field2}")
+          schema.addRelation(table1, field1, table2, field2)
+        }
+      }
+    }
     schema
   }
 }

@@ -167,5 +167,7 @@ class TSqlTests extends FunSuite with Matchers {
     val schema = vis.getSchema(parser)
 
     println(schema.marshallJson())
+
+    println(schema.marshallGraph())
   }
 }
