@@ -1,10 +1,21 @@
 package grammars.tsql
 
-import grammars.{Schema, Table, Trace}
+import grammars.{Column, Schema, Table, Trace}
+import org.antlr.v4.runtime.ParserRuleContext
 
 import scala.collection.JavaConverters._
 
 class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Schema] {
+
+  def addTableTrace(table: Table, ctx: ParserRuleContext): Unit = {
+    println(s"\tadd trace for table ${table.name}, ${ctx.start.getLine}:${ctx.start.getCharPositionInLine}")
+    table.addTrace(new Trace(schema.fileId, ctx.start.getLine, ctx.start.getCharPositionInLine))
+  }
+
+  def addColumnTrace(column: Column, ctx: ParserRuleContext): Unit = {
+    println(s"\tadd trace for column ${column.name}, ${ctx.start.getLine}:${ctx.start.getCharPositionInLine}")
+    column.addTrace(new Trace(schema.fileId, ctx.start.getLine, ctx.start.getCharPositionInLine))
+  }
 
   var alias: String = ""
   override def visitTable_source_item (ctx: TSqlParser.Table_source_itemContext): Schema =  {
@@ -22,7 +33,7 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
     if (!alias.isEmpty) {
       schema.addScope(alias, ctx.getText)
     }
-    table.addTrace(new Trace(schema.fileId, ctx.start.getLine, ctx.start.getCharPositionInLine))
+    addTableTrace(table, ctx)
     visitChildren(ctx)
     schema
   }
@@ -33,7 +44,7 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
     if (!alias.isEmpty) {
       schema.addScope(alias, ctx.getText)
     }
-    table.addTrace(new Trace(schema.fileId, ctx.start.getLine, ctx.start.getCharPositionInLine))
+    addTableTrace(table, ctx)
     visitChildren(ctx)
     schema
   }
@@ -55,7 +66,7 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
 
 //    table.addTrace(new Trace(schema.fileId, ctx.start.getLine, ctx.start.getCharPositionInLine))
     visitChildren(ctx)
-    column.addTrace(new Trace(schema.fileId, ctx.start.getLine, ctx.start.getCharPositionInLine))
+    addColumnTrace(column, ctx)
     schema
   }
 
@@ -85,8 +96,8 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
 
       val column = table.addColumn(ctx.column_name.getText)
 
-      table.addTrace(new Trace(schema.fileId, ctx.start.getLine, ctx.start.getCharPositionInLine))
-      column.addTrace(new Trace(schema.fileId, ctx.start.getLine, ctx.start.getCharPositionInLine))
+      addTableTrace(table, ctx)
+      addColumnTrace(column, ctx)
       return schema
     }
     // todo scope
@@ -97,8 +108,8 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
 
       val column = table.addColumn(ctx.column_name.getText)
 
-      table.addTrace(new Trace(schema.fileId, ctx.start.getLine, ctx.start.getCharPositionInLine))
-      column.addTrace(new Trace(schema.fileId, ctx.start.getLine, ctx.start.getCharPositionInLine))
+      addTableTrace(table, ctx)
+      addColumnTrace(column, ctx)
     }
     visitChildren(ctx)
     schema

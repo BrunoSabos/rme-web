@@ -28,13 +28,18 @@ class TSqlTests extends FunSuite with Matchers {
     schema.tables.length shouldEqual 1
     val table = schema.tables.head
     table.name shouldEqual "T1"
+    table.traces.length shouldEqual 2
     table.traces.head.file shouldEqual "file"
     table.traces.head.line shouldEqual 1
     table.traces.head.column shouldEqual 15
+    table.traces.last.file shouldEqual "file"
+    table.traces.last.line shouldEqual 1
+    table.traces.last.column shouldEqual 7
 
     table.columns.length shouldEqual 1
     val column = table.columns.head
     column.name shouldEqual "C1"
+    column.traces.length shouldEqual 1
     column.traces.head.file shouldEqual "file"
     column.traces.head.line shouldEqual 1
     column.traces.head.column shouldEqual 7
