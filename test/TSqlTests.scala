@@ -47,9 +47,9 @@ class TSqlTests extends FunSuite with Matchers {
 
   test("joinTwoTables") {
     val parser = getParser("""SELECT T1.C2, T2.C3
-FROM T1
-INNER JOIN T2
-ON T1.C1 = T2.C1;""")
+        |FROM T1
+        |INNER JOIN T2
+        |ON T1.C1 = T2.C1;""".stripMargin)
 
     val vis = new TSqlFileVisitor("file")
     val schema = vis.getSchema(parser)
@@ -131,12 +131,35 @@ ON T1.C1 = T2.C1;""")
     table.columns.map(_.name).toSet shouldEqual Set("C1", "C2", "C3")
   }
 
+  test("columnInConditions") {
+    val parser = getParser("""SELECT *
+        |FROM T1 a, T2
+        |WHERE T1.C1 = 1
+        |AND a.C2 = 2
+        |AND T2.C3 = T1.C4;""".stripMargin)
+
+    val vis = new TSqlFileVisitor("file")
+    val schema = vis.getSchema(parser)
+
+    println(schema.marshallJson())
+
+    schema.tables.length shouldEqual 2
+    val table1 = schema.tables.head
+    table1.name shouldEqual "T1"
+    table1.columns.length shouldEqual 3
+    table1.columns.map(_.name).toSet shouldEqual Set("C1", "C2", "C4")
+
+    val table2 = schema.tables.last
+    table2.name shouldEqual "T2"
+    table2.columns.length shouldEqual 1
+    table2.columns.map(_.name).toSet shouldEqual Set("C3")
+  }
+
   test("oneShot") {
     val source = scala.io.Source.fromFile(new File("/data/work/vp/dev/tsqlcontrolsource/LOGSQL02/VPN3/Programmability/Stored Procedures/RPT_OrderDO.sql"))(Codec.ISO8859)
     println(source)
 
     val lines = try source.mkString finally source.close()
-    println(lines)
 
     val parser = getParser(lines)
 

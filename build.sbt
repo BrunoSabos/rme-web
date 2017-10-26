@@ -1,4 +1,4 @@
-name := """play-scala-starter-example"""
+name := """rme-web"""
 
 version := "1.0-SNAPSHOT"
 

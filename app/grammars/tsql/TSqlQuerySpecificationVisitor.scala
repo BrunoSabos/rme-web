@@ -1,6 +1,7 @@
 package grammars.tsql
 
-import grammars.{Schema, Trace}
+import grammars.Schema
+import scala.collection.JavaConverters._
 
 class TSqlQuerySpecificationVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Schema] {
 
@@ -9,6 +10,8 @@ class TSqlQuerySpecificationVisitor(val schema: Schema) extends TSqlParserBaseVi
     val vis = new TSqlSelectListVisitor(schema)
     vis.visit(ctx.table_sources())
     vis.visit(ctx.select_list())
+    ctx.search_condition().asScala.map(vis.visit)
+    ctx.group_by_item().asScala.map(vis.visit)
     schema.closeScope()
   }
 }
