@@ -10,35 +10,51 @@ class Schema (var fileId: String){
   var parser: TSqlParser = null
   var tables: Seq[Table] = Seq[Table]()
   var relations: Seq[Relation] = Seq[Relation]()
-  var scopes: List[Scope] = List(new Scope(null))
+  var tableScopes: List[Scope] = List(new Scope(null))
+  var columnScopes: List[ColumnScope] = List(new ColumnScope(null))
+
+  var alias: Seq[String] = Seq[String]()
+  var derivedTable: Seq[String] = Seq[String]()
 
   def closeScope(): Schema = {
-    val _ :: s = scopes
-    scopes = s
+    val _ :: s = tableScopes
+    tableScopes = s
+    val _ :: c = columnScopes
+    columnScopes = c
     this
   }
 
   def openScope(): Schema = {
-    val parent :: _ = scopes
-    scopes = new Scope(parent) :: scopes
+    val parent :: _ = tableScopes
+    tableScopes = new Scope(parent) :: tableScopes
+    val c :: _ = columnScopes
+    columnScopes = new ColumnScope(c) :: columnScopes
     this
   }
 
-  def addScope(alias: String, table: String): Unit = {
-    scopes.head += alias -> table
+  def addTableScope(alias: String, table: String): Unit = {
+    tableScopes.head += alias -> table
   }
 
-  def fromScope(alias: String): Option[String] = {
-    scopes.head.first(alias)
+  def addColumnScope(columnAlias: String, tableName: String, columnName: String): Unit = {
+    columnScopes.head += columnAlias -> (tableName, columnName)
   }
 
-  def addTable(name: String): Table = {
+  def fromTableScope(alias: String): Option[String] = {
+    tableScopes.head.first(alias)
+  }
+
+  def fromColumnScope(alias: String): Option[(String, String)] = {
+    columnScopes.head.first(alias)
+  }
+
+  def addTable(name: String, derived: Boolean = false): Table = {
     val existingTable = tableByName(name)
     if (existingTable isDefined) {
       return existingTable.get
     }
 
-    val table = new Table(name)
+    val table = new Table(name, derived)
     tables = tables :+ table
     table
   }
@@ -60,6 +76,10 @@ class Schema (var fileId: String){
     tables.find(_.name == name)
   }
 
+  def log(str: String): Unit = {
+    println(("\t"*(tableScopes.length-1))+str)
+  }
+
   def marshallJson(): String = {
     implicit class RichJsObject(original: JsObject) {
       def omitEmpty: JsObject = original.value.foldLeft(original) {
@@ -70,23 +90,33 @@ class Schema (var fileId: String){
     }
 
     implicit val columnWrites = new Writes[Column] {
-      def writes(column: Column) = Json.obj(
-        "name" -> column.name,
-        "traces" -> column.traces.map(t => s"${t.file}:${t.line}:${t.column}")
-      ).omitEmpty
+      def writes(column: Column) = {
+        val traces: Seq[String] = if (column.traces!=null) column.traces.map(t => s"${t.file}:${t.line}:${t.column}") else Seq[String]()
+        Json.obj(
+          "name" -> column.name,
+          "traces" -> traces
+        ).omitEmpty
+      }
     }
 
     implicit val tableWrites = new Writes[Table] {
-      def writes(table: Table) = Json.obj(
-        "name" -> table.name,
-        "traces" -> table.traces.map(t => s"${t.file}:${t.line}:${t.column}"),
-        "columns" -> table.columns
-      ).omitEmpty
+      def writes(table: Table) = {
+        val traces: Seq[String] = if (table.traces!=null) table.traces.map(t => s"${t.file}:${t.line}:${t.column}") else Seq[String]()
+        Json.obj(
+          "name" -> table.name,
+          "traces" -> traces,
+          "columns" -> table.columns
+        ).omitEmpty
+      }
     }
 
     implicit val schemaWrites = new Writes[Schema] {
       def writes(schema: Schema) = Json.obj(
-        "tables" -> schema.tables
+        "tables" -> schema.tables,
+        "relations" -> schema.relations.map(r => Seq[String](
+          s"${r.table1}.${r.field1}",
+          s"${r.table2}.${r.field2}"
+        ))
       ).omitEmpty
     }
 
@@ -157,6 +187,19 @@ class Scope(val parent: Scope) extends scala.collection.mutable.HashMap[String, 
   }
 }
 
+class ColumnScope(val parent: ColumnScope) extends scala.collection.mutable.HashMap[String, (String, String)] {
+  def inScope(varName: String): Boolean = {
+    if (super.contains(varName)) return true
+    if (parent == null) false
+    else parent.inScope(varName)
+  }
+  def first(varName: String): Option[(String, String)] = {
+    if (super.contains(varName)) return super.get(varName)
+    if (parent == null) Option.empty[(String, String)]
+    else parent.first(varName)
+  }
+}
+
 abstract class Identifier(name: String) {
   var aliases: Seq[String]
   var traces: Seq[Trace]
@@ -170,7 +213,7 @@ abstract class Identifier(name: String) {
   }
 }
 
-class Table (var name: String) extends Identifier(name) {
+class Table (var name: String, var derived: Boolean) extends Identifier(name) {
   var columns: Seq[Column] = Seq[Column]()
 
   override var aliases: Seq[String] = _

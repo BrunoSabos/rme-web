@@ -6,12 +6,11 @@ import scala.collection.JavaConverters._
 class TSqlQuerySpecificationVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Schema] {
 
   override def visitQuery_specification (ctx: TSqlParser.Query_specificationContext): Schema = {
-    schema.openScope()
     val vis = new TSqlSelectListVisitor(schema)
     vis.visit(ctx.table_sources())
     vis.visit(ctx.select_list())
     ctx.search_condition().asScala.map(vis.visit)
     ctx.group_by_item().asScala.map(vis.visit)
-    schema.closeScope()
+    schema
   }
 }
