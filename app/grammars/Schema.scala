@@ -10,25 +10,27 @@ class Schema (var fileId: String){
   var parser: TSqlParser = null
   var tables: Seq[Table] = Seq[Table]()
   var relations: Seq[Relation] = Seq[Relation]()
-  var tableScopes: List[Scope] = List(new Scope(null))
+  var tableScopes: List[TableScope] = List(new TableScope(null))
   var columnScopes: List[ColumnScope] = List(new ColumnScope(null))
 
   var alias: Seq[String] = Seq[String]()
   var derivedTable: Seq[String] = Seq[String]()
 
   def closeScope(): Schema = {
-    val _ :: s = tableScopes
-    tableScopes = s
-    val _ :: c = columnScopes
-    columnScopes = c
+    log(s"* close scope level ${tableScopes.length}")
+    val _ :: tableScopesTail = tableScopes
+    tableScopes = tableScopesTail
+    val _ :: columnScopesTail = columnScopes
+    columnScopes = columnScopesTail
     this
   }
 
   def openScope(): Schema = {
-    val parent :: _ = tableScopes
-    tableScopes = new Scope(parent) :: tableScopes
-    val c :: _ = columnScopes
-    columnScopes = new ColumnScope(c) :: columnScopes
+    log(s"* open scope level ${tableScopes.length+1}")
+    val tablesScopesHead :: _ = tableScopes
+    tableScopes = new TableScope(tablesScopesHead) :: tableScopes
+    val columnsScopeHead :: _ = columnScopes
+    columnScopes = new ColumnScope(columnsScopeHead) :: columnScopes
     this
   }
 
@@ -36,16 +38,23 @@ class Schema (var fileId: String){
     tableScopes.head += alias -> table
   }
 
-  def addColumnScope(columnAlias: String, tableName: String, columnName: String): Unit = {
-    columnScopes.head += columnAlias -> (tableName, columnName)
+  def addColumnScope(columnAlias: String, tableName: String, columnName: String, siblingsOnly: Boolean = false): Unit = {
+
+    val level = if (siblingsOnly) columnScopes.length else 0
+
+    // todo remove [] ``
+    log(s"* add column scope $columnAlias -> $tableName.$columnName, level $level")
+    columnScopes.head += columnAlias -> new ColumnAlias(columnAlias, tableName, columnName, level)
   }
 
   def fromTableScope(alias: String): Option[String] = {
     tableScopes.head.first(alias)
   }
 
-  def fromColumnScope(alias: String): Option[(String, String)] = {
-    columnScopes.head.first(alias)
+  def fromColumnScope(alias: String): Option[ColumnAlias] = {
+    val a: Option[ColumnAlias] = columnScopes.head.first(alias)
+    if (a.nonEmpty && (a.get.level == 0 || a.get.level >= columnScopes.length)) {return a}
+    None
   }
 
   def addTable(name: String, derived: Boolean = false): Table = {
@@ -174,7 +183,9 @@ class Schema (var fileId: String){
   }
 }
 
-class Scope(val parent: Scope) extends scala.collection.mutable.HashMap[String, String] {
+class ColumnAlias(val alias: String, val table: String, val column: String, val level: Int = 0){}
+
+class TableScope(val parent: TableScope) extends scala.collection.mutable.HashMap[String, String] {
   def inScope(varName: String): Boolean = {
     if (super.contains(varName)) return true
     if (parent == null) false
@@ -187,15 +198,15 @@ class Scope(val parent: Scope) extends scala.collection.mutable.HashMap[String, 
   }
 }
 
-class ColumnScope(val parent: ColumnScope) extends scala.collection.mutable.HashMap[String, (String, String)] {
+class ColumnScope(val parent: ColumnScope) extends scala.collection.mutable.HashMap[String, ColumnAlias] {
   def inScope(varName: String): Boolean = {
     if (super.contains(varName)) return true
     if (parent == null) false
     else parent.inScope(varName)
   }
-  def first(varName: String): Option[(String, String)] = {
+  def first(varName: String): Option[ColumnAlias] = {
     if (super.contains(varName)) return super.get(varName)
-    if (parent == null) Option.empty[(String, String)]
+    if (parent == null) Option.empty[ColumnAlias]
     else parent.first(varName)
   }
 }
