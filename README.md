@@ -2,6 +2,8 @@ Master: [![Build Status](https://travis-ci.org/BrunoSabos/rme-web.svg?branch=mas
 
 Develop: [![Build Status](https://travis-ci.org/BrunoSabos/rme-web.svg?branch=develop)](https://travis-ci.org/BrunoSabos/rme-web)
 
+[![Coverage Status](https://coveralls.io/repos/github/BrunoSabos/rme-web/badge.svg)](https://coveralls.io/github/BrunoSabos/rme-web)
+
 # rme-web
 
 * https://github.com/antlr
