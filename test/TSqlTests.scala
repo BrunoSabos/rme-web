@@ -6,20 +6,9 @@ import grammars.tsql.{TSqlFileVisitor, TSqlLexer, TSqlParser}
 import org.antlr.v4.runtime.{CharStreams, CommonTokenStream}
 import org.scalatest._
 
-import scala.io.Codec
-
 class TSqlTests extends FunSuite with Matchers {
-
-  def getParser(statements: String): TSqlParser = {
-    val statementsUpper = statements.toUpperCase
-    val stream = new ByteArrayInputStream(statementsUpper.getBytes(StandardCharsets.UTF_8))
-    val lexer = new TSqlLexer(CharStreams.fromStream(stream, StandardCharsets.UTF_8))
-    val tokens = new CommonTokenStream(lexer)
-    new grammars.tsql.TSqlParser(tokens)
-  }
-
   test("oneTable") {
-    val parser = getParser("SELECT C1 FROM T1;")
+    val parser = TSqlTests.getParser("SELECT C1 FROM T1;")
 
     val vis = new TSqlFileVisitor("file")
     val schema = vis.getSchema(parser)
@@ -47,7 +36,7 @@ class TSqlTests extends FunSuite with Matchers {
   }
 
   test("joinTwoTables") {
-    val parser = getParser(
+    val parser = TSqlTests.getParser(
       """SELECT T1.C2, T2.C3
         |FROM T1
         |INNER JOIN T2
@@ -104,7 +93,7 @@ class TSqlTests extends FunSuite with Matchers {
   }
 
   test("oneTableMultipleColumns") {
-    val parser = getParser("SELECT C1, C2, C3 FROM T1;")
+    val parser = TSqlTests.getParser("SELECT C1, C2, C3 FROM T1;")
 
     val vis = new TSqlFileVisitor("file")
     val schema = vis.getSchema(parser)
@@ -119,7 +108,7 @@ class TSqlTests extends FunSuite with Matchers {
   }
 
   test("alias") {
-    val parser = getParser("SELECT a.C1, T1.C2, C3 FROM T1 a;")
+    val parser = TSqlTests.getParser("SELECT a.C1, T1.C2, C3 FROM T1 a;")
 
     val vis = new TSqlFileVisitor("file")
     val schema = vis.getSchema(parser)
@@ -134,7 +123,7 @@ class TSqlTests extends FunSuite with Matchers {
   }
 
   test("subSelect") {
-    val parser = getParser(
+    val parser = TSqlTests.getParser(
       """SELECT Tt.Ca, T1.C2, T2.C4
         |FROM (
         |  SELECT T1.C1 AS Ca, T1.C2
@@ -171,7 +160,7 @@ class TSqlTests extends FunSuite with Matchers {
   }
 
   test("subSubSelect") {
-    val parser = getParser(
+    val parser = TSqlTests.getParser(
       """SELECT Tt.Ca
         |FROM (
         |  SELECT Tu.C1 AS Ca
@@ -211,7 +200,7 @@ class TSqlTests extends FunSuite with Matchers {
   }
 
   test("subSubSelectScopeConflict") {
-    val parser = getParser(
+    val parser = TSqlTests.getParser(
       """SELECT VVV.CCC1,
         |       VVV.C2
         |FROM
@@ -285,7 +274,7 @@ class TSqlTests extends FunSuite with Matchers {
   }
 
   test("complexFields") {
-    val parser = getParser(
+    val parser = TSqlTests.getParser(
       """select distinct b.ShipName,
         |    concat(d.FirstName,  ' ', d.LastName) as Salesperson,
         |    e.UnitPrice * e.Quantity * (1 - e.Discount) as ExtendedPrice
@@ -325,7 +314,7 @@ class TSqlTests extends FunSuite with Matchers {
   }
 
   test("columnInConditions") {
-    val parser = getParser("""SELECT *
+    val parser = TSqlTests.getParser("""SELECT *
         |FROM T1 a, T2
         |WHERE T1.C1 = 1
         |AND a.C2 = 2
@@ -345,24 +334,14 @@ class TSqlTests extends FunSuite with Matchers {
     table2.columns.length shouldEqual 1
     table2.columns.map(_.name).toSet shouldEqual Set("C3")
   }
+}
 
-  test("oneShot") {
-//    val source = scala.io.Source.fromFile(new File("/data/work/vp/dev/tsqlcontrolsource/LOGSQL02/VPN3/Programmability/Stored Procedures/RPT_OrderDO.sql"))(Codec.ISO8859)
-//    val source = scala.io.Source.fromFile(new File("/data/work/vp/dev/tsqlcontrolsource/LOGSQL02/VPN3/Programmability/Stored Procedures/IMP_GetSurExp.sql"))(Codec.ISO8859)
-    val source = scala.io.Source.fromFile(new File("/data/work/vp/dev/tsqlcontrolsource/LOGSQL02/VPN3/Programmability/Stored Procedures/P_GetPricing.sql"))(Codec.ISO8859)
-//    val source = scala.io.Source.fromFile(new File("/data/perso/dev/rme-core/databases/74610bb80f3e490e8d428fff3ac95ba8/55F1D96BAA717C8D5F5DA6A0CA926B44A8A13F60.sql"))(Codec.UTF8)
-//    val source = scala.io.Source.fromFile(new File("/data/perso/dev/rme-core/databases/89c9145973cc492daad2349fee78920b/b.sql"))(Codec.UTF8)
-    println(source)
-
-    val lines = try source.mkString finally source.close()
-
-    val parser = getParser(lines)
-
-    val vis = new TSqlFileVisitor("file")
-    val schema = vis.getSchema(parser)
-
-    println(schema.marshallJson())
-
-    println(schema.marshallGraph())
+object TSqlTests {
+  def getParser(statements: String): TSqlParser = {
+    val statementsUpper = statements.toUpperCase
+    val stream = new ByteArrayInputStream(statementsUpper.getBytes(StandardCharsets.UTF_8))
+    val lexer = new TSqlLexer(CharStreams.fromStream(stream, StandardCharsets.UTF_8))
+    val tokens = new CommonTokenStream(lexer)
+    new grammars.tsql.TSqlParser(tokens)
   }
 }
