@@ -1,6 +1,6 @@
 package grammars.tsql
 
-import grammars.tsql.TSqlParser.Full_column_nameContext
+import grammars.tsql.TSqlParser.{Full_column_nameContext, IdContext}
 import grammars.{Column, Schema, Table, Trace}
 import org.antlr.v4.runtime.ParserRuleContext
 
@@ -21,7 +21,7 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
 
   override def visitTable_source_item (ctx: TSqlParser.Table_source_itemContext): Schema =  {
     if(ctx.derived_table() != null){
-      val tableName = ctx.as_table_alias.table_alias.id.getText
+      val tableName = getCleanId(ctx.as_table_alias.table_alias.id)
 
       schema.derivedTable = tableName +: schema.derivedTable
       schema.log(s"+ Derived table ${schema.derivedTable.head} +: ${schema.derivedTable.tail.mkString(",")}")
@@ -51,7 +51,7 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
     }
     else {
       if(ctx.as_table_alias != null) {
-        val tableName = ctx.as_table_alias.table_alias.id.getText
+        val tableName = getCleanId(ctx.as_table_alias.table_alias.id)
 
         schema.alias = tableName +: schema.alias
         schema.log(s"+ Table alias ${schema.alias.head} -> ${schema.alias.tail.mkString(",")}")
@@ -86,7 +86,7 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
 
   override def visitFull_table_name (ctx: TSqlParser.Full_table_nameContext): Schema = {
     schema.log("FullTableName")
-    val tableName = ctx.table.getText
+    val tableName = getCleanId(ctx.table)
 
 //    val derived: Boolean = (schema.derivedTable.headOption.getOrElse("") == tableName)
     if (tableName == schema.derivedTable.headOption.getOrElse("")) {
@@ -120,7 +120,7 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
 
   override def visitTable_name (ctx: TSqlParser.Table_nameContext): Schema = {
     schema.log("TableName")
-    val tableName = ctx.table.getText
+    val tableName = getCleanId(ctx.table)
 
     if (tableName == schema.derivedTable.headOption.getOrElse("")) {
       schema.log(s"\t? table $tableName derived")
@@ -152,8 +152,8 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
 
     var table: Table = null
 //    var tableAlias: String = ""
-    val tableName: String = if(ctx.table_name!=null)ctx.table_name.getText else ""
-    val columnName: String = ctx.column_name.getText
+    val tableName: String = if(ctx.table_name!=null)getCleanId(ctx.table_name.table) else ""
+    val columnName: String = getCleanId(ctx.column_name)
 
     if (tableName.nonEmpty) {
       if (tableName == schema.derivedTable.headOption.getOrElse("")) {
@@ -183,27 +183,38 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
     schema
   }
 
+  def getCleanId(id: IdContext): String = {
+//    if(id.getText.startsWith("[")){
+//      val a=1
+//    }
+
+    if(id.simple_id()!=null){
+      return id.getText
+    }
+    if(id.DOUBLE_QUOTE_ID()!=null){
+      return id.getText.stripMargin('"')
+    }
+    if(id.SQUARE_BRACKET_ID()!=null){
+      return id.getText.stripPrefix("[").stripSuffix("]")
+    }
+    id.getText
+  }
+
   override def visitColumn_elem(ctx: TSqlParser.Column_elemContext): Schema = {
     schema.log("ColumnElem")
 
     var table: Table = null
     var column: Column = null
-    var tableName: String = if (ctx.table_name()!=null)ctx.table_name().getText else ""
-    var columnName: String = ctx.column_name.getText
-    val columnAlias: String = if (ctx.as_column_alias() != null) ctx.as_column_alias().column_alias().getText else ""
+    var tableName: String = if (ctx.table_name()!=null)getCleanId(ctx.table_name().table) else ""
+    var columnName: String = getCleanId(ctx.column_name)
+    val columnAlias: String = if (ctx.as_column_alias() != null) getCleanId(ctx.as_column_alias().column_alias().id()) else ""
 
     if(tableName.nonEmpty) {
-//      var tableAlias: String = tableName.getText
-//      var column: Column = null
       if (schema.fromColumnScope(columnName).isDefined) {
-//        table = schema.addTable(schema.fromColumnScope(columnName).get._1)
-//        column = table.addColumn(schema.fromColumnScope(columnName).get._2)
-
         table = schema.tableByName(schema.fromColumnScope(columnName).get.table).get
         tableName = table.name
         columnName = schema.fromColumnScope(columnName).get.column
       }
-
 
 
       if (schema.fromTableScope(tableName).isDefined) {
@@ -219,7 +230,6 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
 //        schema.log(s"? table ${table.name} derived")
 //      }
 
-//      columnAlias = columnName
       if (columnAlias.nonEmpty) {
         schema.log(s"\t> add column scope ${table.name}.$columnName as $columnAlias")
         schema.addColumnScope(columnAlias, table.name, columnName)
@@ -268,7 +278,7 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
     var fieldName: String=""
 
     if (aI.table_name() != null) {
-      tableName = aI.table_name().getText
+      tableName = getCleanId(aI.table_name().table)
 
       schema.log(s"table $i name $tableName")
       if (schema.fromTableScope(tableName) isDefined) {
@@ -278,7 +288,7 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
       }
     }
     if (aI.id() != null) {
-      fieldName = aI.id().getText
+      fieldName = getCleanId(aI.id())
     }
     //        if(table1 == null) {
     if (
@@ -325,7 +335,7 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
 
 
 
-        if(table1 != null && field1 != null && table2 != null && field2 != null) {
+        if(table1 != null && field1 != null && table2 != null && field2 != null && table1.nonEmpty && field1.nonEmpty && table2.nonEmpty && field2.nonEmpty) {
 //          if (schema.fromColumnScope(field1) isDefined){
 //            table1 = schema.fromColumnScope(field1).get._1
 //            schema.log(s"table rename $table1")

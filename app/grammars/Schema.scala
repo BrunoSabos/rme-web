@@ -5,8 +5,13 @@ import play.api.libs.json._
 
 import scala.collection._
 import scala.io._
+import scala.runtime.ScalaRunTime
 
 class Schema (var fileId: String){
+  def getSortedRelations(): Seq[Relation] = {
+    relations.sortBy(r => (r.table1, r.table2, r.field1, r.field2))
+  }
+
   var parser: TSqlParser = null
   var tables: Seq[Table] = Seq[Table]()
   var relations: Seq[Relation] = Seq[Relation]()
@@ -42,7 +47,6 @@ class Schema (var fileId: String){
 
     val level = if (siblingsOnly) columnScopes.length else 0
 
-    // todo remove [] ``
     log(s"* add column scope $columnAlias -> $tableName.$columnName, level $level")
     columnScopes.head += columnAlias -> new ColumnAlias(columnAlias, tableName, columnName, level)
   }
@@ -55,6 +59,7 @@ class Schema (var fileId: String){
     val a: Option[ColumnAlias] = columnScopes.head.first(alias)
     if (a.nonEmpty && (a.get.level == 0 || a.get.level >= columnScopes.length)) {return a}
     None
+//    a
   }
 
   def addTable(name: String, derived: Boolean = false): Table = {
@@ -255,5 +260,5 @@ class Column(var name: String) extends Identifier(name) {
 class Trace(var file: String, var line: Int, var column: Int){
 }
 
-class Relation(var table1: String, var field1: String, var table2: String, var field2: String){
+class Relation(var table1: String, var field1: String, var table2: String, var field2: String) {
 }
