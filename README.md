@@ -1,3 +1,7 @@
+Master: [![Build Status](https://travis-ci.org/BrunoSabos/rme-web.svg?branch=master)](https://travis-ci.org/BrunoSabos/rme-web)
+
+Develop: [![Build Status](https://travis-ci.org/BrunoSabos/rme-web.svg?branch=develop)](https://travis-ci.org/BrunoSabos/rme-web)
+
 # rme-web
 
 * https://github.com/antlr
