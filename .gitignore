@@ -8,5 +8,5 @@ target
 /RUNNING_PID
 
 PERSO.md
-**/grammars/**/*.tokens
-**/grammars/**/*.java
+#**/grammars/**/*.tokens
+#**/grammars/**/*.java
