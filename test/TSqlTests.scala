@@ -1,10 +1,11 @@
-import java.io.{ByteArrayInputStream, File}
+import java.io._
 import java.nio.charset.StandardCharsets
 
 import grammars.Relation
 import grammars.tsql.{TSqlFileVisitor, TSqlLexer, TSqlParser}
 import org.antlr.v4.runtime.{CharStreams, CommonTokenStream}
 import org.scalatest._
+import services.Viz
 
 class TSqlTests extends FunSuite with Matchers {
   test("oneTable") {
@@ -333,6 +334,24 @@ class TSqlTests extends FunSuite with Matchers {
     val table2 = schema.tableByName("T2").get
     table2.columns.length shouldEqual 1
     table2.columns.map(_.name).toSet shouldEqual Set("C3")
+  }
+
+  test("svg") {
+    val parser = TSqlTests.getParser("""SELECT *
+                                       |FROM T1 a, T2
+                                       |WHERE T1.C1 = 1
+                                       |AND a.C2 = 2
+                                       |AND T2.C3 = T1.C4;""".stripMargin)
+
+    val vis = new TSqlFileVisitor("file")
+    val schema = vis.getSchema(parser)
+
+    println(schema.marshallJson())
+    println(schema.marshallGraph())
+
+    val viz = new Viz()
+    val svg = viz.getSvg(schema.marshallGraph())
+    println(svg)
   }
 }
 

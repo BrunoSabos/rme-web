@@ -9,6 +9,11 @@ import org.antlr.v4.runtime._
 import play.api.data.Forms._
 import play.api.data._
 import play.api.mvc._
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.PrintStream
+
+import services.Viz
 
 /**
  * This controller creates an `Action` to handle HTTP requests to the
@@ -61,6 +66,33 @@ class ParseController @Inject()(cc: ControllerComponents) extends AbstractContro
 
 //    Redirect(controllers.routes.ParseController.index())
 //    Ok(views.html.parse(sqlForm, schema.tables.length))
+  }
+
+  def image = Action { implicit request =>
+    var sqlForm = Form(
+      mapping(
+        "sql" -> text
+      )(sqlFormData.apply)(sqlFormData.unapply)
+    )
+    sqlForm.bindFromRequest.fold(
+      formWithErrors => {
+        println("error")
+        println(formWithErrors.toString)
+        BadRequest(views.html.parse(formWithErrors, 0, ""))
+      },
+      sql => {
+        println("ok")
+        println(sql.sql)
+        sqlForm = sqlForm.fill(sql)
+        val parser = getParser(sql.sql)
+
+        val vis = new TSqlFileVisitor("file")
+        val schema = vis.getSchema(parser)
+        val viz = new Viz()
+        val svg = viz.getSvg(schema.marshallGraph())
+        Ok(svg).as("image/svg+xml")
+      }
+    )
   }
 }
 
