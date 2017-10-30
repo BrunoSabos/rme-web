@@ -123,6 +123,20 @@ class TSqlTests extends FunSuite with Matchers {
     table.columns.map(_.name).toSet shouldEqual Set("C1", "C2", "C3")
   }
 
+  test("star") {
+    val parser = TSqlTests.getParser("SELECT * FROM table T1")
+
+    val vis = new TSqlFileVisitor("file")
+    val schema = vis.getSchema(parser)
+
+    println(schema.marshallJson())
+
+    schema.tables.length shouldEqual 1
+    val table = schema.tables.head
+    table.name shouldEqual "T1"
+    table.columns.length shouldEqual 0
+  }
+
   test("subSelect") {
     val parser = TSqlTests.getParser(
       """SELECT Tt.Ca, T1.C2, T2.C4
