@@ -14,5 +14,6 @@ libraryDependencies += "com.h2database" % "h2" % "1.4.196"
 libraryDependencies += filters
 libraryDependencies += "org.webjars" % "jquery" % "3.2.1"
 libraryDependencies += "org.webjars" % "bootstrap" % "4.0.0-beta-1"
+libraryDependencies += "org.webjars" % "material-design-icons" % "3.0.1"
 libraryDependencies += "com.adrianhurt" %% "play-bootstrap" % "1.2-P26-B4"
 //libraryDependencies += "org.scoverage" % "scalac-scoverage-runtime_2.12" % "1.5.0"
