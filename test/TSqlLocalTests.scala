@@ -18,14 +18,10 @@ class TSqlLocalTests extends FunSuite with Matchers {
       println(source)
 
       val lines = try source.mkString finally source.close()
-
-      val parser = TSqlTests.getParser(lines)
-
       val vis = new TSqlFileVisitor("file")
-      val schema = vis.getSchema(parser)
+      val schema = vis.getSchema(lines)
 
       println(schema.marshallJson())
-
       println(schema.marshallGraph())
     }
   }

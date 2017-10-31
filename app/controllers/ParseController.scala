@@ -1,18 +1,12 @@
 package controllers
 
-import java.io.ByteArrayInputStream
-import java.nio.charset.StandardCharsets
 import javax.inject._
 
-import grammars.tsql.{TSqlFileVisitor, TSqlLexer, TSqlParser}
-import org.antlr.v4.runtime._
+import grammars.Schema
+import grammars.tsql.TSqlFileVisitor
 import play.api.data.Forms._
 import play.api.data._
 import play.api.mvc._
-import java.io.FileOutputStream
-import java.io.IOException
-import java.io.PrintStream
-
 import services.Viz
 
 /**
@@ -22,13 +16,6 @@ import services.Viz
 @Singleton
 class ParseController @Inject()(cc: ControllerComponents) extends AbstractController(cc) with play.api.i18n.I18nSupport {
 
-  def getParser(statements: String): TSqlParser = {
-    val statementsUpper = statements.toUpperCase
-    val stream = new ByteArrayInputStream(statementsUpper.getBytes(StandardCharsets.UTF_8))
-    val lexer = new TSqlLexer(CharStreams.fromStream(stream, StandardCharsets.UTF_8))
-    val tokens = new CommonTokenStream(lexer)
-    new grammars.tsql.TSqlParser(tokens)
-  }
   /**
    * Create an Action to render an HTML page with a welcome message.
    * The configuration in the `routes` file means that this method
@@ -51,21 +38,15 @@ class ParseController @Inject()(cc: ControllerComponents) extends AbstractContro
         println("ok")
         println(sql.sql)
         sqlForm = sqlForm.fill(sql)
-        val parser = getParser(sql.sql)
-
         val vis = new TSqlFileVisitor("file")
-        val schema = vis.getSchema(parser)
-
-        println(schema.marshallJson())
-//        val contactId = Contact.save(contact)
-//        Redirect(routes.Application.showContact(contactId)).flashing("success" -> "Contact saved!")
-
-        Ok(views.html.parse(sqlForm, schema.tables.length, schema.marshallJson()))
+        vis.getSchema(sql.sql) match {
+          case null => BadRequest(vis.getErrors.mkString)
+          case schema: Schema =>
+            println(schema.marshallJson())
+            Ok(views.html.parse(sqlForm, schema.tables.length, schema.marshallJson()))
+        }
       }
     )
-
-//    Redirect(controllers.routes.ParseController.index())
-//    Ok(views.html.parse(sqlForm, schema.tables.length))
   }
 
   def image = Action { implicit request =>
@@ -81,16 +62,15 @@ class ParseController @Inject()(cc: ControllerComponents) extends AbstractContro
         BadRequest(views.html.parse(formWithErrors, 0, ""))
       },
       sql => {
-        println("ok")
-        println(sql.sql)
         sqlForm = sqlForm.fill(sql)
-        val parser = getParser(sql.sql)
-
         val vis = new TSqlFileVisitor("file")
-        val schema = vis.getSchema(parser)
-        val viz = new Viz()
-        val svg = viz.getSvg(schema.marshallGraph())
-        Ok(svg).as("image/svg+xml")
+        vis.getSchema(sql.sql) match {
+          case null => BadRequest(vis.getErrors.mkString)
+          case schema: Schema =>
+            val viz = new Viz ()
+            val svg = viz.getSvg (schema.marshallGraph())
+            Ok (svg).as("image/svg+xml")
+        }
       }
     )
   }

@@ -4,15 +4,13 @@ import grammars.tsql.TSqlParser
 import play.api.libs.json._
 
 import scala.collection._
-import scala.io._
-import scala.runtime.ScalaRunTime
 
 class Schema (var fileId: String){
-  def getSortedRelations(): Seq[Relation] = {
+  def getSortedRelations: Seq[Relation] = {
     relations.sortBy(r => (r.table1, r.table2, r.field1, r.field2))
   }
 
-  var parser: TSqlParser = null
+  var parser: TSqlParser = _
   var tables: Seq[Table] = Seq[Table]()
   var relations: Seq[Relation] = Seq[Relation]()
   var tableScopes: List[TableScope] = List(new TableScope(null))
@@ -104,7 +102,7 @@ class Schema (var fileId: String){
     }
 
     implicit val columnWrites = new Writes[Column] {
-      def writes(column: Column) = {
+      def writes(column: Column): JsObject = {
         val traces: Seq[String] = if (column.traces!=null) column.traces.map(t => s"${t.file}:${t.line}:${t.column}") else Seq[String]()
         Json.obj(
           "name" -> column.name,
@@ -114,7 +112,7 @@ class Schema (var fileId: String){
     }
 
     implicit val tableWrites = new Writes[Table] {
-      def writes(table: Table) = {
+      def writes(table: Table): JsObject = {
         val traces: Seq[String] = if (table.traces!=null) table.traces.map(t => s"${t.file}:${t.line}:${t.column}") else Seq[String]()
         Json.obj(
           "name" -> table.name,
@@ -125,7 +123,7 @@ class Schema (var fileId: String){
     }
 
     implicit val schemaWrites = new Writes[Schema] {
-      def writes(schema: Schema) = Json.obj(
+      def writes(schema: Schema): JsObject = Json.obj(
         "tables" -> schema.tables,
         "relations" -> schema.relations.map(r => Seq[String](
           s"${r.table1}.${r.field1}",
@@ -180,8 +178,8 @@ class Schema (var fileId: String){
         |  ];
         |  edge [
         |  ];
-        |  ${graphNodes}
-        |  ${graphRelations}
+        |  $graphNodes
+        |  $graphRelations
         |}
       """.stripMargin.trim
     graph

@@ -5,7 +5,6 @@ import grammars.{Column, Schema, Table, Trace}
 import org.antlr.v4.runtime.ParserRuleContext
 
 import scala.collection.JavaConverters._
-import scala.collection._
 
 class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Schema] {
 
@@ -37,14 +36,8 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
       schema.closeScope()
 
       schema.log(s"> Columns aliases extraction from derived tables: " + lastColumnScope.map(e => s"${e._1} -> ${schema.derivedTable.head} (${e._2.table}).${e._2.column}").mkString(", "))
-//      schema.log(s"> Columns extraction from derived tables: " + lastColumnScope.map(e => s"${e._1} -> ${e._2._1}.${e._2._2}").mkString(","))
 
       lastColumnScope.foreach(e => schema.addColumnScope(e._1, e._2.table, e._2.column, siblingsOnly = true))
-
-//      schema.log(s"\ttable derived columns extraction: " + lastColumnScope.map(e => s"${e._1} -> ${schema.derivedTable.head} (${e._2._1}).${e._2._2}").mkString(", "))
-      //      schema.log(s"\tderived columns extraction: " + lastColumnScope.map(e => s"${e._1} -> ${e._2._1}.${e._2._2}").mkString(","))
-
-//      lastColumnScope.foreach(e => schema.addColumnScope(e._1, e._2._1, e._2._2))
 
       schema.log(s"- Derived table ${schema.derivedTable.head} -: ${schema.derivedTable.tail.mkString(",")}")
       schema.derivedTable = schema.derivedTable.tail
@@ -387,7 +380,7 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
       a.children.asScala.head match {
         case aI: Full_column_nameContext =>
           if (aI.table_name() != null) {
-            // todo refact
+            // todo refactor
             table1 = aI.table_name().getText
 
             schema.log(s"table 1 name $table1")
@@ -402,7 +395,7 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
         case _ =>
       }
       if (b.column_elem() != null){
-        var aI = b.column_elem()
+        val aI = b.column_elem()
         if (aI.table_name() != null) {
           schema.log(s"table 2 name $table2")
           table2 = aI.table_name().getText
