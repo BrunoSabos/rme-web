@@ -1,12 +1,15 @@
 package controllers
 
+import java.io.File
 import javax.inject._
 
 import grammars.Schema
 import grammars.tsql.TSqlFileVisitor
 import play.api.data.Forms._
 import play.api.data._
+import play.api.http.ContentTypes
 import play.api.mvc._
+import play.api.libs.json.Json
 import services.Viz
 
 /**
@@ -73,6 +76,49 @@ class ParseController @Inject()(cc: ControllerComponents) extends AbstractContro
         }
       }
     )
+  }
+
+  def databasesList = Action { implicit request =>
+    // todo conf
+    val dir = "/data/work/vp/dev/tsqlcontrolsource/"
+    val dirs = getListOfDirs(dir).flatMap(d => getListOfDirs(d.getAbsolutePath).map(sd =>
+      Json.obj(
+        "server" -> d.getName,
+        "database" -> sd.getName
+      )
+    ))
+    Ok(Json.toJson(dirs)).as(ContentTypes.JSON)
+  }
+
+  def programmabilitySPList(serverName: String, databaseName: String) = Action { implicit request =>
+    // todo conf
+    val dir = "/data/work/vp/dev/tsqlcontrolsource/"+serverName+"/"+databaseName+"/Programmability/Stored Procedures"
+//    println("=======")
+//    println(dir)
+    val dirs = getListOfFiles(dir).map(_.getName).sorted
+//    println(dirs)
+    //    println(Json.toJson(dirs))
+    //    println(Json.stringify(Json.toJson(dirs)))
+
+    Ok(Json.toJson(dirs)).as(ContentTypes.JSON)
+  }
+
+  def getListOfDirs(dir: String):List[File] = {
+    val d = new File(dir)
+    if (d.exists && d.isDirectory) {
+      d.listFiles.filter(f => f.isDirectory && !f.getName.startsWith(".")).toList
+    } else {
+      List[File]()
+    }
+  }
+
+  def getListOfFiles(dir: String):List[File] = {
+    val d = new File(dir)
+    if (d.exists && d.isDirectory) {
+      d.listFiles.filter(_.isFile).toList
+    } else {
+      List[File]()
+    }
   }
 }
 

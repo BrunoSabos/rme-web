@@ -3,33 +3,89 @@
 
 @main("Welcome to Play") {
     <div class="row">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-body">
-                    <h4 class="card-title">SQL</h4>
-                    <div id="sql_ace"></div>
-                    <i class="fa fa-server" aria-hidden="true"></i>
-                    @b4.form(action = controllers.routes.ParseController.index()) {
-                        @b4.textarea(sqlForm("sql"))
-                        @b4.submit('class -> "btn btn-primary") { <i class="material-icons">add</i> Parse }
-                    }
+        <div class="col-md-2">
+            <nav class="bll">
+                <div class="bki">
+                    <form class="blj">
+                        <input class="form-control" type="text" placeholder="Search...">
+                        <button type="submit" class="ku">
+                            <span class="bv bdb"></span>
+                        </button>
+                    </form>
+                    <ul class="nav lq st">
+                        <li class="asv">Dashboards</li>
+                        <li class="lp">
+                            <a class="ln active" href="index.html">Overview</a>
+                        </li>
+                        <li class="lp">
+                            <a class="ln " href="order-history/index.html">Order history</a>
+                        </li>
+                        <li class="lp">
+                            <a class="ln " href="fluid/index.html">Fluid layout</a>
+                        </li>
+                        <li class="lp">
+                            <a class="ln " href="icon-nav/index.html">Icon nav</a>
+                        </li>
+
+                        <li class="asv">More</li>
+                        <li class="lp">
+                            <a class="ln " href="docs/index.html">
+                                Toolkit docs
+                            </a>
+                        </li>
+                        <li class="lp">
+                            <a class="ln" href="http://getbootstrap.com" target="blank">
+                                Bootstrap docs
+                            </a>
+                        </li>
+                        <li class="lp">
+                            <a class="ln " href="index-light/index.html">Light UI</a>
+                        </li>
+                        <li class="lp">
+                            <a class="ln" href="#docsModal" data-toggle="modal">
+                                Example modal
+                            </a>
+                        </li>
+                    </ul>
+                <hr class="bmi aah">
+                </div>
+            </nav>
+        </div>
+        <div class="col-md-10">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h4 class="card-title">SQL</h4>
+                            <div id="sql_ace"></div>
+                            <i class="fa fa-server" aria-hidden="true"></i>
+                            @b4.form(action = controllers.routes.ParseController.index()) {
+                                @b4.textarea(sqlForm("sql"))
+                                @b4.submit('class -> "btn btn-primary") { <i class="material-icons">add</i> Parse }
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h4 class="card-title">Tables</h4>
+
+                            <p class="card-text">
+                                We found @tableCount tables
+                                <br/>
+                        <pre id="json">@json</pre>
+                            <div id="jsonEditor"></div>
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-body">
-                    <h4 class="card-title">Tables</h4>
-
-                    <p class="card-text">
-                        We found @tableCount tables
-                        <br/>
-                <pre id="json">@json</pre>
-                    <div id="jsonEditor"></div>
-                    </p>
+            <div class="row">
+                <div class="col-md-12">
+                    <img src="http://0.0.0.0:9000/image?sql=select+T1.b%2C+T2.c+from+T1+inner+join+T2+on+T1.a+%3D+T2.a"/>
                 </div>
             </div>
         </div>
     </div>
-    <img src="http://0.0.0.0:9000/image?sql=select+T1.b%2C+T2.c+from+T1+inner+join+T2+on+T1.a+%3D+T2.a"/>
 }
