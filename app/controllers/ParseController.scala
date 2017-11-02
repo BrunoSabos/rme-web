@@ -12,6 +12,8 @@ import play.api.mvc._
 import play.api.libs.json.Json
 import services.Viz
 
+import scala.collection.immutable
+
 /**
  * This controller creates an `Action` to handle HTTP requests to the
  * application's home page.
@@ -19,6 +21,8 @@ import services.Viz
 @Singleton
 class ParseController @Inject()(cc: ControllerComponents) extends AbstractController(cc) with play.api.i18n.I18nSupport {
 
+//  val dir = "/home/mickael/work/vp/rme-web/db/"
+  val dir = "/data/work/vp/dev/tsqlcontrolsource/"
   /**
    * Create an Action to render an HTML page with a welcome message.
    * The configuration in the `routes` file means that this method
@@ -80,7 +84,6 @@ class ParseController @Inject()(cc: ControllerComponents) extends AbstractContro
 
   def databasesList = Action { implicit request =>
     // todo conf
-    val dir = "/data/work/vp/dev/tsqlcontrolsource/"
     val dirs = getListOfDirs(dir).flatMap(d => getListOfDirs(d.getAbsolutePath).map(sd =>
       Json.obj(
         "server" -> d.getName,
@@ -92,15 +95,23 @@ class ParseController @Inject()(cc: ControllerComponents) extends AbstractContro
 
   def programmabilitySPList(serverName: String, databaseName: String) = Action { implicit request =>
     // todo conf
-    val dir = "/data/work/vp/dev/tsqlcontrolsource/"+serverName+"/"+databaseName+"/Programmability/Stored Procedures"
+    val dir = this.dir+serverName+"/"+databaseName+"/Programmability/Stored Procedures"
 //    println("=======")
 //    println(dir)
     val dirs = getListOfFiles(dir).map(_.getName).sorted
+
+    val sps:immutable.Map[String, String] = dirs.map(file => {
+      val source = scala.io.Source.fromFile(dir + "/" + file)
+      val sql = try source.mkString finally source.close()
+      file -> sql
+    }).toMap
+
+
 //    println(dirs)
     //    println(Json.toJson(dirs))
     //    println(Json.stringify(Json.toJson(dirs)))
 
-    Ok(Json.toJson(dirs)).as(ContentTypes.JSON)
+    Ok(Json.toJson(sps)).as(ContentTypes.JSON)
   }
 
   def getListOfDirs(dir: String):List[File] = {
