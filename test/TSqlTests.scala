@@ -43,6 +43,9 @@ class TSqlTests extends FunSuite with Matchers {
       case null => fail(vis.getErrors.mkString)
       case schema: Schema =>
 
+        // T1: C1, C2
+        // T2: C1, C3
+
         println(schema.marshallJson())
 
         schema.tables.length shouldEqual 2
@@ -178,6 +181,35 @@ class TSqlTests extends FunSuite with Matchers {
     }
   }
 
+  test("columnAsSelect") {
+    val vis = new TSqlFileVisitor("file")
+    vis.getSchema(
+      """SELECT
+        |  AAA.C4,
+        |    (
+        |      SELECT BBB.C1
+        |      FROM s.B BBB
+        |      WHERE BBB.C2 = AAA.C2
+        |    ) AS C3
+        |FROM A AAA
+        |""".stripMargin) match {
+      case null => fail(vis.getErrors.mkString)
+      case schema: Schema =>
+
+        // A: C4, C2
+        // B: C1, C2
+
+//        println(schema.marshallJson())
+
+        schema.tables.length shouldEqual 2
+        val table1 = schema.tableByName("A").get
+        table1.columns.map(_.name).toSet shouldEqual Set("C4", "C2")
+
+        val table2 = schema.tableByName("B").get
+        table2.columns.map(_.name).toSet shouldEqual Set("C1", "C2")
+    }
+  }
+
   test("subSubSelect") {
     val vis = new TSqlFileVisitor("file")
     vis.getSchema(
@@ -241,7 +273,7 @@ class TSqlTests extends FunSuite with Matchers {
         |  (SELECT *
         |   FROM
         |     (SELECT AAA.C1 AS [CCC1],
-        |             D.C1 AS [C2]
+        |             DD1.C1 AS [C2]
         |      FROM A AAA WITH (READUNCOMMITTED)
         |      LEFT JOIN D DD1 WITH (READUNCOMMITTED) ON DD1.CCC1=AAA.C1
         |     ) YYY
@@ -268,19 +300,15 @@ class TSqlTests extends FunSuite with Matchers {
 
         schema.tables.length shouldEqual 4
         val table1 = schema.tableByName("A").get
-        table1.columns.length shouldEqual 2
         table1.columns.map(_.name).toSet shouldEqual Set("C1", "F1")
 
         val table2 = schema.tableByName("B").get
-        table2.columns.length shouldEqual 2
         table2.columns.map(_.name).toSet shouldEqual Set("CCC1", "E1")
 
         val table3 = schema.tableByName("C").get
-        table3.columns.length shouldEqual 3
         table3.columns.map(_.name).toSet shouldEqual Set("C2", "D1", "E1")
 
         val table4 = schema.tableByName("D").get
-        table4.columns.length shouldEqual 3
         table4.columns.map(_.name).toSet shouldEqual Set("C1", "CCC1", "C2")
 
         schema.relations.length shouldEqual 5

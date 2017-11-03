@@ -8,7 +8,7 @@ import scala.io.Codec
 
 class TSqlLocalTests extends FunSuite with Matchers {
   test("oneShot") {
-    val filepath: String = "/data/work/vp/dev/tsqlcontrolsource/LOGSQL02/VPN3/Programmability/Stored Procedures/P_GetPricing.sql"
+    val filepath: String = "/data/work/vp/dev/tsqlcontrolsource/LOGSQL02/VPN3/Programmability/Stored Procedures/ART_GetItemsForOperation.sql"
     if(Files.exists(Paths.get(filepath))) {
       //    val source = scala.io.Source.fromFile(new File("/data/work/vp/dev/tsqlcontrolsource/LOGSQL02/VPN3/Programmability/Stored Procedures/RPT_OrderDO.sql"))(Codec.ISO8859)
       //    val source = scala.io.Source.fromFile(new File("/data/work/vp/dev/tsqlcontrolsource/LOGSQL02/VPN3/Programmability/Stored Procedures/IMP_GetSurExp.sql"))(Codec.ISO8859)
@@ -24,5 +24,24 @@ class TSqlLocalTests extends FunSuite with Matchers {
       println(schema.marshallJson())
       println(schema.marshallGraph())
     }
+  }
+
+  test("oneShotString") {
+    val query = """
+                  |	SELECT
+                  |		ax.ItemId,
+                  |		substring((SELECT ', '+ bc.BarCode
+                  |		 FROM itemRef.T_BarCodes bc
+                  |		 WHERE bc.OperationCode = ax.OperationCode AND bc.ItemId = ax.ItemId
+                  |		 for XML PATH('')), 3, 50) AS BarCodes
+                  |	FROM
+                  |		ItemRef.T_ItemsAX ax
+    """.stripMargin
+
+    val vis = new TSqlFileVisitor("file")
+    val schema = vis.getSchema(query)
+
+    println(schema.marshallJson())
+//    println(schema.marshallGraph())
   }
 }

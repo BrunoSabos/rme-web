@@ -45,7 +45,11 @@ class Schema (var fileId: String){
 
     val level = if (siblingsOnly) columnScopes.length else 0
 
-    log(s"* add column scope $columnAlias -> $tableName.$columnName, level $level")
+    val existingScope = fromColumnScope(columnAlias).getOrElse(new ColumnAlias("", "", "", 0))
+    val existingTableName = existingScope.table
+    val existingColumnName = existingScope.column
+
+    log(s"* add column scope $columnAlias -> $tableName.$columnName, level $level, existing $existingTableName.$existingColumnName")
     columnScopes.head += columnAlias -> new ColumnAlias(columnAlias, tableName, columnName, level)
   }
 
@@ -53,8 +57,8 @@ class Schema (var fileId: String){
     tableScopes.head.first(alias)
   }
 
-  def fromColumnScope(alias: String): Option[ColumnAlias] = {
-    val a: Option[ColumnAlias] = columnScopes.head.first(alias)
+  def fromColumnScope(alias: String, tableAlias: String = null): Option[ColumnAlias] = {
+    val a: Option[ColumnAlias] = if(tableAlias == null) columnScopes.head.first(alias) else columnScopes.head.first(tableAlias, alias)
     if (a.nonEmpty && (a.get.level == 0 || a.get.level >= columnScopes.length)) {return a}
     None
 //    a
@@ -211,6 +215,11 @@ class ColumnScope(val parent: ColumnScope) extends scala.collection.mutable.Hash
     if (super.contains(varName)) return super.get(varName)
     if (parent == null) Option.empty[ColumnAlias]
     else parent.first(varName)
+  }
+  def first(tableName: String, varName: String): Option[ColumnAlias] = {
+    if (super.contains(tableName+"."+varName)) return super.get(tableName+"."+varName)
+    if (parent == null) Option.empty[ColumnAlias]
+    else parent.first(tableName, varName)
   }
 }
 

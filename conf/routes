@@ -3,16 +3,18 @@
 # ~~~~
 
 # An example controller showing a sample home page
-GET     /                           controllers.HomeController.index
+GET         /                                                           controllers.HomeController.index
 # An example controller showing how to use dependency injection
 #GET     /count                      controllers.CountController.count
 # An example controller showing how to write asynchronous code
-GET     /message                    controllers.AsyncController.message
+GET         /message                                                    controllers.AsyncController.message
 # An example controller showing how to use dependency injection
-GET     /parse                      controllers.ParseController.index
-GET     /image                      controllers.ParseController.image
-GET     /databases                  controllers.ParseController.databasesList
-GET     /databases/:serverName/:databaseName/sps                  controllers.ParseController.programmabilitySPList(serverName: String, databaseName: String)
+GET         /parse                                                      controllers.ParseController.index
+GET         /image                                                      controllers.ParseController.image
+POST        /image                                                      controllers.ParseController.imagePost
+GET         /databases                                                  controllers.ParseController.databasesList
+GET         /databases/:serverName/:databaseName/sps                    controllers.ParseController.programmabilitySPList(serverName: String, databaseName: String)
+GET         /databases/:serverName/:databaseName/sps/:spFilename        controllers.ParseController.programmabilitySPGet(serverName: String, databaseName: String, spFilename: String)
 
 # Map static resources from the /public folder to the /assets URL path
-GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
+GET         /assets/*file                                               controllers.Assets.versioned(path="/public", file: Asset)
