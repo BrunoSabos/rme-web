@@ -5,9 +5,15 @@ import play.api.libs.json._
 
 import scala.collection._
 
-class Schema (var fileId: String){
+class Schema(var fileId: String) {
+  var logEnabled = true
+
   def getSortedRelations: Seq[Relation] = {
     relations.sortBy(r => (r.table1, r.table2, r.field1, r.field2))
+  }
+
+  def getFlippedRelations: Seq[Relation] = {
+    relations.map(r => if (r.table1 + "." + r.field1 < r.table2 + "." + r.field2) r else new Relation(r.table2, r.field2, r.table1, r.field1))
   }
 
   var parser: TSqlParser = _
@@ -29,7 +35,7 @@ class Schema (var fileId: String){
   }
 
   def openScope(): Schema = {
-    log(s"* open scope level ${tableScopes.length+1}")
+    log(s"* open scope level ${tableScopes.length + 1}")
     val tablesScopesHead :: _ = tableScopes
     tableScopes = new TableScope(tablesScopesHead) :: tableScopes
     val columnsScopeHead :: _ = columnScopes
@@ -58,10 +64,12 @@ class Schema (var fileId: String){
   }
 
   def fromColumnScope(alias: String, tableAlias: String = null): Option[ColumnAlias] = {
-    val a: Option[ColumnAlias] = if(tableAlias == null) columnScopes.head.first(alias) else columnScopes.head.first(tableAlias, alias)
-    if (a.nonEmpty && (a.get.level == 0 || a.get.level >= columnScopes.length)) {return a}
+    val a: Option[ColumnAlias] = if (tableAlias == null) columnScopes.head.first(alias) else columnScopes.head.first(tableAlias, alias)
+    if (a.nonEmpty && (a.get.level == 0 || a.get.level >= columnScopes.length)) {
+      return a
+    }
     None
-//    a
+    //    a
   }
 
   def addTable(name: String, derived: Boolean = false): Table = {
@@ -77,10 +85,10 @@ class Schema (var fileId: String){
 
   def addRelation(table1: String, field1: String, table2: String, field2: String): Relation = {
     // todo unique relation
-//    val existingTable = tableByName(table1)
-//    if (existingTable isDefined) {
-//      return existingTable.get
-//    }
+    //    val existingTable = tableByName(table1)
+    //    if (existingTable isDefined) {
+    //      return existingTable.get
+    //    }
 
     val relation = new Relation(table1, field1, table2, field2)
     relations = relations :+ relation
@@ -88,12 +96,14 @@ class Schema (var fileId: String){
   }
 
   def tableByName(name: String): Option[Table] = {
-    if(tables isEmpty) return Option.empty[Table]
+    if (tables isEmpty) return Option.empty[Table]
     tables.find(_.name == name)
   }
 
   def log(str: String): Unit = {
-    println(("\t"*(tableScopes.length-1))+str)
+    if (logEnabled) {
+      println(("\t" * (tableScopes.length - 1)) + str)
+    }
   }
 
   def marshallJson(): String = {
@@ -107,7 +117,7 @@ class Schema (var fileId: String){
 
     implicit val columnWrites = new Writes[Column] {
       def writes(column: Column): JsObject = {
-        val traces: Seq[String] = if (column.traces!=null) column.traces.map(t => s"${t.file}:${t.line}:${t.column}") else Seq[String]()
+        val traces: Seq[String] = if (column.traces != null) column.traces.map(t => s"${t.file}:${t.line}:${t.column}") else Seq[String]()
         Json.obj(
           "name" -> column.name,
           "traces" -> traces
@@ -117,7 +127,7 @@ class Schema (var fileId: String){
 
     implicit val tableWrites = new Writes[Table] {
       def writes(table: Table): JsObject = {
-        val traces: Seq[String] = if (table.traces!=null) table.traces.map(t => s"${t.file}:${t.line}:${t.column}") else Seq[String]()
+        val traces: Seq[String] = if (table.traces != null) table.traces.map(t => s"${t.file}:${t.line}:${t.column}") else Seq[String]()
         Json.obj(
           "name" -> table.name,
           "traces" -> traces,
@@ -148,10 +158,10 @@ class Schema (var fileId: String){
     val graphNodeFields: String = t.columns.map(marshallGraphNodeFields).mkString("|")
 
     s"""
-      |  "${t.name}" [
-      |    label = "${t.name}|$graphNodeFields"
-      |    shape = "record"
-      |  ];""".stripMargin
+       |  "${t.name}" [
+       |    label = "${t.name}|$graphNodeFields"
+       |    shape = "record"
+       |  ];""".stripMargin
   }
 
   def marshallGraphRelation(r: Relation, id: Int): String = {
@@ -170,27 +180,27 @@ class Schema (var fileId: String){
     val graphRelations: String = relations.zipWithIndex.map(z => marshallGraphRelation(z._1, z._2)).mkString("")
     val graph: String =
       s"""
-        |graph g {
-        |  graph [
-        |    rankdir = "LR",
-        |    ranksep = "1.0"
-        |  ];
-        |  node [
-        |   fontsize = "10"
-        |   shape = "record",
-        |   fontname = "Calibri"
-        |  ];
-        |  edge [
-        |  ];
-        |  $graphNodes
-        |  $graphRelations
-        |}
+         |graph g {
+         |  graph [
+         |    rankdir = "LR",
+         |    ranksep = "1.0"
+         |  ];
+         |  node [
+         |   fontsize = "10"
+         |   shape = "record",
+         |   fontname = "Calibri"
+         |  ];
+         |  edge [
+         |  ];
+         |  $graphNodes
+         |  $graphRelations
+         |}
       """.stripMargin.trim
     graph
   }
 }
 
-class ColumnAlias(val alias: String, val table: String, val column: String, val level: Int = 0){}
+class ColumnAlias(val alias: String, val table: String, val column: String, val level: Int = 0) {}
 
 class TableScope(val parent: TableScope) extends scala.collection.mutable.HashMap[String, String] {
   def inScope(varName: String): Boolean = {
@@ -198,6 +208,7 @@ class TableScope(val parent: TableScope) extends scala.collection.mutable.HashMa
     if (parent == null) false
     else parent.inScope(varName)
   }
+
   def first(varName: String): Option[String] = {
     if (super.contains(varName)) return super.get(varName)
     if (parent == null) Option.empty[String]
@@ -211,13 +222,15 @@ class ColumnScope(val parent: ColumnScope) extends scala.collection.mutable.Hash
     if (parent == null) false
     else parent.inScope(varName)
   }
+
   def first(varName: String): Option[ColumnAlias] = {
     if (super.contains(varName)) return super.get(varName)
     if (parent == null) Option.empty[ColumnAlias]
     else parent.first(varName)
   }
+
   def first(tableName: String, varName: String): Option[ColumnAlias] = {
-    if (super.contains(tableName+"."+varName)) return super.get(tableName+"."+varName)
+    if (super.contains(tableName + "." + varName)) return super.get(tableName + "." + varName)
     if (parent == null) Option.empty[ColumnAlias]
     else parent.first(tableName, varName)
   }
@@ -228,7 +241,7 @@ abstract class Identifier(name: String) {
   var traces: Seq[Trace]
 
   def addTrace(trace: Trace) {
-    if(traces == null){
+    if (traces == null) {
       traces = Seq[Trace](trace)
     } else {
       traces = traces :+ trace
@@ -236,7 +249,7 @@ abstract class Identifier(name: String) {
   }
 }
 
-class Table (var name: String, var derived: Boolean) extends Identifier(name) {
+class Table(var name: String, var derived: Boolean) extends Identifier(name) {
   var columns: Seq[Column] = Seq[Column]()
 
   override var aliases: Seq[String] = _
@@ -249,12 +262,12 @@ class Table (var name: String, var derived: Boolean) extends Identifier(name) {
     }
 
     val column = new Column(name)
-    columns =  columns :+ column
+    columns = columns :+ column
     column
   }
 
   def columnByName(name: String): Option[Column] = {
-    if(columns isEmpty) return Option.empty[Column]
+    if (columns isEmpty) return Option.empty[Column]
     columns.find(_.name == name)
   }
 }
@@ -264,8 +277,10 @@ class Column(var name: String) extends Identifier(name) {
   override var traces: Seq[Trace] = _
 }
 
-class Trace(var file: String, var line: Int, var column: Int){
+class Trace(var file: String, var line: Int, var column: Int) {
 }
 
 class Relation(var table1: String, var field1: String, var table2: String, var field2: String) {
 }
+
+class Field(var table: String, var column: String) {}

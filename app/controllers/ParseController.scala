@@ -75,7 +75,7 @@ class ParseController @Inject()(cc: ControllerComponents) extends AbstractContro
           case null => BadRequest(vis.getErrors.mkString)
           case schema: Schema =>
             val viz = new Viz()
-            val svg = viz.getSvg(schema.marshallGraph())
+            val svg = viz.getSVG(schema.marshallGraph())
             Ok(svg).as("image/svg+xml")
         }
       }
@@ -101,7 +101,7 @@ class ParseController @Inject()(cc: ControllerComponents) extends AbstractContro
           case null => BadRequest(vis.getErrors.mkString)
           case schema: Schema =>
             val viz = new Viz()
-            val svg = viz.getSvg(schema.marshallGraph())
+            val svg = viz.getSVG(schema.marshallGraph())
             Ok(svg).as("image/svg+xml")
         }
       }

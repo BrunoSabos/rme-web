@@ -8,6 +8,8 @@ import scala.collection.JavaConverters._
 
 class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Schema] {
 
+  var noHintTable: Option[String] = Option.empty[String]
+
   def addTableTrace(table: Table, ctx: ParserRuleContext): Unit = {
     schema.log(s"\t\t+ trace for table ${table.name}, ${ctx.start.getLine}:${ctx.start.getCharPositionInLine}")
     table.addTrace(new Trace(schema.fileId, ctx.start.getLine, ctx.start.getCharPositionInLine))
@@ -20,7 +22,7 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
 
   override def visitExpression_elem(ctx: TSqlParser.Expression_elemContext): Schema = {
     // todo column alias
-    if(ctx.expression().bracket_expression() != null) {
+    if (ctx.expression().bracket_expression() != null) {
       val subQueryVisitor = new TSqlQuerySpecificationVisitor(schema)
       subQueryVisitor.visit(ctx.expression())
     } else {
@@ -51,10 +53,9 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
       lastColumnScope.foreach(e => schema.addColumnScope(e._1, e._2.table, e._2.column, siblingsOnly = true))
 
 
-
       schema.log(s"> Columns aliases extraction from derived tables with table name: " + lastColumnScope.map(e => s"${e._1} -> ${schema.derivedTable.head} (${e._2.table}).${e._2.column}").mkString(", "))
 
-      lastColumnScope.foreach(e => schema.addColumnScope(schema.derivedTable.head+"."+e._1, e._2.table, e._2.column, siblingsOnly = true))
+      lastColumnScope.foreach(e => schema.addColumnScope(schema.derivedTable.head + "." + e._1, e._2.table, e._2.column, siblingsOnly = true))
 
       schema.log(s"- Derived table ${schema.derivedTable.head} -: ${schema.derivedTable.tail.mkString(",")}")
       schema.derivedTable = schema.derivedTable.tail
@@ -130,6 +131,8 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
   override def visitTable_name(ctx: TSqlParser.Table_nameContext): Schema = {
     schema.log("TableName")
     val tableName = getCleanId(ctx.table)
+    schema.log(s"No hint table == $tableName")
+    noHintTable = Some(tableName)
 
     if (tableName == schema.derivedTable.headOption.getOrElse("")) {
       schema.log(s"\t? table $tableName derived")
@@ -272,8 +275,16 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
     }
 
     // todo scope
-    else if (schema.tables.count(!_.derived) == 1) {
-      table = schema.tables.filter(!_.derived).head
+    else if (schema.tables.count(!_.derived) == 1 && noHintTable.nonEmpty) {
+      // table = schema.tables.filter(!_.derived).head
+//      val dt = schema.tables.filter(d => !d.derived)
+//      table = schema.tableScopes.head.filter(t => dt.contains(t._1)).head
+      val maybeTable = schema.tables.find(_.name == noHintTable.get)
+      if(maybeTable.isEmpty){
+        schema.log(s"\t> no hint table ${noHintTable.get} not found")
+        return schema
+      }
+      table = maybeTable.get
 
       if (columnAlias.nonEmpty) {
         schema.log(s"\t> add column scope ${table.name}.$columnName as $columnAlias")
@@ -320,10 +331,10 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
     if (aI.id() != null) {
       fieldName = getCleanId(aI.id())
     }
-//    if (tableNameFirst == null) {
-//    if (schema.fromTableScope(tableNameFirst).isEmpty && schema.fromColumnScope(fieldName).isDefined) {
+    //    if (tableNameFirst == null) {
+    //    if (schema.fromTableScope(tableNameFirst).isEmpty && schema.fromColumnScope(fieldName).isDefined) {
     val maybeColumnAlias = schema.fromColumnScope(fieldName, tableName)
-//    if (maybeColumnAlias.isDefined && !schema.derivedTable.contains(maybeColumnAlias.get.table)) {
+    //    if (maybeColumnAlias.isDefined && !schema.derivedTable.contains(maybeColumnAlias.get.table)) {
     if (maybeColumnAlias.isDefined && maybeColumnAlias.get.level > 0) {
       schema.log(s"table $i rename $tableName => ${maybeColumnAlias.get.table} (found in column scope with ${maybeColumnAlias.get.column}, level ${maybeColumnAlias.get.level})")
       tableName = maybeColumnAlias.get.table
@@ -334,11 +345,13 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
     //      schema.log(s"table $i rename $tableName")
     //    }
 
-    schema.log(s"\t+ when resolve, declare $tableName.$fieldName")
-    val table = schema.addTable(tableName)
-    val column = table.addColumn(fieldName)
+    if (tableName != null) {
+      schema.log(s"\t+ when resolve, declare $tableName.$fieldName")
+      val table = schema.addTable(tableName)
+      val column = table.addColumn(fieldName)
+    }
     // todo add trace
-//    addColumnTrace(column, aI)
+    //    addColumnTrace(column, aI)
 
     (tableName, fieldName)
   }
