@@ -108,6 +108,23 @@ class ParseController @Inject()(cc: ControllerComponents) extends AbstractContro
     )
   }
 
+  def serversList = Action { implicit request =>
+    // todo conf
+    val dirs = getListOfDirs(dir).map(d =>
+      Json.obj(
+        "name" -> d.getName,
+        "databases" -> getListOfDirs(d.getAbsolutePath).map(sd =>
+          Json.obj(
+            "server" -> d.getName,
+            "name" -> sd.getName,
+            "fullName" -> s"${d.getName} / ${sd.getName}"
+          )
+        )
+      )
+    )
+    Ok(Json.toJson(dirs)).as(ContentTypes.JSON)
+  }
+
   def databasesList = Action { implicit request =>
     // todo conf
     val dirs = getListOfDirs(dir).flatMap(d => getListOfDirs(d.getAbsolutePath).map(sd =>

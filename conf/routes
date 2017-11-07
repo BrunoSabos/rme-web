@@ -12,6 +12,7 @@ GET         /message                                                    controll
 GET         /parse                                                      controllers.ParseController.index
 GET         /image                                                      controllers.ParseController.image
 POST        /image                                                      controllers.ParseController.imagePost
+GET         /servers                                                    controllers.ParseController.serversList
 GET         /databases                                                  controllers.ParseController.databasesList
 GET         /databases/:serverName/:databaseName/sps                    controllers.ParseController.programmabilitySPList(serverName: String, databaseName: String)
 GET         /databases/:serverName/:databaseName/sps/:spFilename        controllers.ParseController.programmabilitySPGet(serverName: String, databaseName: String, spFilename: String)
