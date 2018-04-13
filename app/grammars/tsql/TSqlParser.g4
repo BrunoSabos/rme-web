@@ -2767,7 +2767,7 @@ for_clause
     ;
 
 xml_common_directives
-    : ',' (BINARY_BASE64 | TYPE | ROOT)
+    : ',' (BINARY_BASE64 | TYPE | ROOT) ('(' STRING ')')?
     ;
 
 order_by_expression
@@ -3395,6 +3395,7 @@ id
     : simple_id
     | DOUBLE_QUOTE_ID
     | SQUARE_BRACKET_ID
+    | R | ROLE | PORT | IP | PASSWORD // todo hack, accept keywords as table, column, alias ...
     ;
 
 simple_id

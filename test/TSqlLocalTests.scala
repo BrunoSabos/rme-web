@@ -67,8 +67,11 @@ class TSqlLocalTests extends FunSuite with Matchers {
     val repoDir = new File(repositoryDir)
     val visibleDirs: File => Boolean = d => d.isDirectory && !d.getName.startsWith(".")
     val visibleQueries: File => Boolean = d => d.isFile && !d.getName.startsWith(".")
+    var schemaGLobal = new Schema("global")
     if (repoDir.exists) {
       val serversDir = repoDir.listFiles().filter(visibleDirs)
+        // todo filter
+        //.filter(s => s.getName == "ADMINSQL")
       serversDir.foreach(s => {
         println(s"SERVER: ${s.getName}")
         val databasesDir = s.listFiles().filter(visibleDirs)
@@ -78,9 +81,12 @@ class TSqlLocalTests extends FunSuite with Matchers {
           val spDir = new File(Paths.get(d.getAbsolutePath, spPath).toString)
           if (spDir.exists) {
             val queries = spDir.listFiles().filter(visibleQueries)
+            val nbQueries = queries.length
+            var ixQuery = 0
             queries.foreach(q => {
               breakable {
-                println(s"QUERY: ${q.getName}")
+                ixQuery += 1
+                println(s"QUERY $ixQuery / $nbQueries: ${q.getName}")
 
                 val queryContentBUffer = scala.io.Source.fromFile(new File(q.getAbsolutePath))(Codec.ISO8859)
                 val vis = new TSqlFileVisitor("file")
@@ -102,6 +108,9 @@ class TSqlLocalTests extends FunSuite with Matchers {
                   println(s"======> ERROR: ${q.getAbsolutePath} - " + vis.getErrors.mkString(", "))
                   break
                 }
+
+                schemaGLobal.merge(schema)
+
                 val viz = new Viz()
                 val str = schema.marshallGraph()
                 //                println("Get png")
@@ -115,6 +124,17 @@ class TSqlLocalTests extends FunSuite with Matchers {
                 //              println(imagePath)
                 writeToFile(png, imagePath)
                 //              fail("ok")
+
+
+                // Global schema
+                val gviz = new Viz()
+                val gstr = schemaGLobal.marshallGraph()
+                val gpng = viz.getPNG(gstr)
+                if (gviz.getErrors.nonEmpty) {
+                  fail(gviz.getErrors.mkString(", "))
+                }
+                val gimagePath = Paths.get(imagesDir, s.getName, d.getName, spPath+"/")+"global.png"
+                writeToFile(gpng, gimagePath)
               }
             })
           }

@@ -198,6 +198,21 @@ class Schema(var fileId: String) {
       """.stripMargin.trim
     graph
   }
+
+  def merge(other: Schema): Unit = {
+    val tablesPart = other.tables.partition(o => tables.exists(t => t.name == o.name))
+    tables = tables ++ tablesPart._2
+    tablesPart._1.foreach(o => {
+      val table = tables.find(_.name == o.name).get
+      val columnsPart = o.columns.partition(oc => table.columns.exists(tc => tc.name == oc.name))
+      table.columns = table.columns ++ columnsPart._2
+    })
+
+    relations = relations ++ other.getFlippedRelations
+      .map(r => (r.table1, r.field1, r.table2, r.field2))
+      .diff(relations.map(r => (r.table1, r.field1, r.table2, r.field2)))
+      .map(r => new Relation(r._1, r._2, r._3, r._4))
+  }
 }
 
 class ColumnAlias(val alias: String, val table: String, val column: String, val level: Int = 0) {}

@@ -242,7 +242,7 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
     var columnName: String = _columnName
     val columnAlias: String = _columnAlias
 
-    schema.log(s"\tlooking for $tableName.$columnName")
+    schema.log(s"\tlooking for $tableName.$columnName, table hint ($noHintTable)")
 
     if (tableName.nonEmpty) {
       val maybeColumnAlias = schema.fromColumnScope(columnName, tableName)
@@ -275,7 +275,7 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
     }
 
     // todo scope
-    else if (schema.tables.count(!_.derived) == 1 && noHintTable.nonEmpty) {
+    else if (schema.tables.count(!_.derived) >= 1 && noHintTable.nonEmpty) {
       // table = schema.tables.filter(!_.derived).head
 //      val dt = schema.tables.filter(d => !d.derived)
 //      table = schema.tableScopes.head.filter(t => dt.contains(t._1)).head
@@ -304,6 +304,7 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
     }
     else {
       // todo
+      schema.log(s"\ttable not found")
       return schema
     }
     column = table.addColumn(columnName)
@@ -431,6 +432,7 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
       var field1: String = null
       var table2: String = null
       var field2: String = null
+      // todo parse b before
       a.children.asScala.head match {
         case aI: Full_column_nameContext =>
           if (aI.table_name() != null) {
@@ -448,6 +450,7 @@ class TSqlSelectListVisitor(val schema: Schema) extends TSqlParserBaseVisitor[Sc
           }
         case _ =>
       }
+      // todo use visitor for select, get back first table.column
       if (b.column_elem() != null) {
         val aI = b.column_elem()
         if (aI.table_name() != null) {
